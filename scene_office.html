@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>纸怨——办公室</title>
+    <link rel="stylesheet" href="css/main.css">
+    <style>
+        .narration-box {
+            overflow-y: hidden !important; /* 彻底禁用滚动，包括占位 */
+            max-height: none !important;   /* 取消高度限制，对话框自适应 */
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <a href="map.html" class="map-link">回到地图</a>
+        
+        <div class="scene-area scene-container">
+            <!-- 办公室单场景（新增scene-content容器匹配main.css定位） -->
+            <div class="scene" id="scene1">
+                <div class="scene-content">
+                    <img src="res/office.jpg" alt="办公室" class="scene-bg">
+                    
+                    <!-- 改用main.css的narration-box替换自定义dialog-box -->
+                    <div class="narration-box" style="opacity: 1;">
+                        <div class="dialog-title">
+                            <span style="display:inline-block;width:20px;height:20px;background-color:#4ecdc4;border-radius:50%;text-align:center;line-height:20px;">你</span>
+                            你
+                        </div>
+                        <div class="narration-text"> <!-- 改用main.css的narration-text -->
+                            这是文本
+                        </div>
+                        <div class="dialog-options"> <!-- 复用main.css的按钮样式 -->
+                            <button onclick="showMessage('这是文本')">这是线索</button>
+                            <button onclick="showMessage('这是文本')">这是线索</button>
+                            <button onclick="showMessage('这是文本')">这是线索</button>
+                            <button onclick="showMessage('这是文本')">这是线索</button>
+                            <button onclick="showMessage('这是文本')">这是线索</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 直播区完全复用main.css样式 -->
+        <div class="live-area">
+            <div class="live-header">
+                <h3 class="live-title">直播间评论区</h3>
+                <span class="viewer-count">在线人数: 14236</span>
+            </div>
+            <div class="comment-area">
+                <div class="comment">
+                    <div class="comment-user">我是网友</div>
+                    <div>这是文本</div>
+                </div>
+                <div class="comment">
+                    <div class="comment-user">我是网友</div>
+                    <div>这是文本</div>
+                </div>
+                <div class="comment">
+                    <div class="comment-user">我是网友</div>
+                    <div>这是文本</div>
+                </div>
+                <div class="comment">
+                    <div class="comment-user">我是网友</div>
+                    <div>这是文本</div>
+                </div>
+                <div class="comment">
+                    <div class="comment-user">我是网友</div>
+                    <div>这是文本</div>
+                </div>
+                <div class="comment">
+                    <div class="comment-user">我是网友</div>
+                    <div>这是文本！</div>
+                </div>
+            </div>
+            <div class="comment-input">
+                <input type="text" placeholder="发送你的评论...">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 保留原有消息显示逻辑，适配narration-text类
+        function showMessage(message) {
+            const dialogText = document.querySelector('.narration-text');
+            if (dialogText) {
+                dialogText.textContent = message;
+                
+                // 重要线索触发特殊评论（保留原有逻辑）
+                if (message.includes('封口费') || message.includes('心理评估') || message.includes('目击者')) {
+                    addNewComment('真相追寻者', '这个证据太关键了！老师果然知情！');
+                }
+            }
+        }
+        
+        // 保留新增评论逻辑
+        function addNewComment(user, content) {
+            const commentArea = document.querySelector('.comment-area');
+            const newComment = document.createElement('div');
+            newComment.className = 'comment';
+            newComment.innerHTML = `
+                <div class="comment-user">${user}</div>
+                <div>${content}</div> <!-- 去掉多余的comment-content类，匹配main.css -->
+            `;
+            commentArea.appendChild(newComment);
+            scrollCommentsToBottom();
+        }
+        
+        // 保留评论区滚动逻辑
+        function scrollCommentsToBottom() {
+            const commentArea = document.querySelector('.comment-area');
+            if (commentArea) {
+                commentArea.scrollTop = commentArea.scrollHeight;
+            }
+        }
+        
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            scrollCommentsToBottom();
+            // 确保对话框默认显示
+            document.querySelector('#scene1 .narration-box').style.opacity = 1;
+        });
+    </script>
+</body>
+</html>

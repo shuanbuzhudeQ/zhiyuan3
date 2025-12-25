@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>纸怨——厕所</title>
+    <!-- 只保留main.css引入，删除所有重复样式定义 -->
+    <link rel="stylesheet" href="css/main.css">
+    <style>
+        /* 仅保留禁用对话框滚动条的样式（和其他页面一致） */
+        .narration-box {
+            overflow-y: hidden !important; /* 彻底禁用滚动，包括占位 */
+            max-height: none !important;   /* 取消高度限制，对话框自适应 */
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <a href="map.html" class="map-link">回到地图</a>
+        
+        <div class="scene-area scene-container">
+            <!-- 场景1：洗手台区域 -->
+            <div class="scene" id="scene1">
+                <div class="scene-content"> <!-- 新增scene-content容器匹配main.css定位 -->
+                    <img src="res/厕所洗手台.jpg" alt="洗手台区域" class="scene-bg">
+                    
+                    <!-- 改用main.css的narration-box替换自定义dialog-box -->
+                    <div class="narration-box" style="opacity: 1;">
+                        <div class="dialog-title">
+                            <span style="display:inline-block;width:20px;height:20px;background-color:#4ecdc4;border-radius:50%;text-align:center;line-height:20px;">你</span>
+                            主控
+                        </div>
+                        <div class="narration-text"> <!-- 改用main.css的narration-text -->
+                            这是文本
+                        </div>
+                        <div class="dialog-options"> <!-- 复用main.css的按钮样式 -->
+                            <button onclick="showMessage('这是文本', 1)">这是线索</button>
+                            <button onclick="showMessage('这是文本', 1)">这是线索</button>
+                            <button onclick="showMessage('这是文本', 1)">这是线索</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 场景切换按钮（复用main.css的图片箭头样式） -->
+                    <a href="#scene2" class="scene-link"></a>
+                </div>
+            </div>
+
+            <!-- 场景2：厕所里间 -->
+            <div class="scene" id="scene2">
+                <div class="scene-content"> <!-- 新增scene-content容器 -->
+                    <img src="res/厕所隔间.jpg" alt="厕所里间" class="scene-bg">
+                    
+                    <div class="narration-box" style="opacity: 1;">
+                        <div class="dialog-title">
+                            <span style="display:inline-block;width:20px;height:20px;background-color:#ff6b6b;border-radius:50%;text-align:center;line-height:20px;">!</span>
+                            恐怖发现
+                        </div>
+                        <div class="narration-text">
+                            这是文本
+                        </div>
+                        <div class="dialog-options">
+                            <button onclick="showMessage('这是文本', 2)">这是线索</button>
+                            <button onclick="showMessage('这是文本', 2)">这是线索</button>
+                            <button onclick="showMessage('这是文本', 2)">这是线索</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 场景返回按钮（复用main.css箭头样式） -->
+                    <a href="#scene1" class="scene-link"></a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 直播区完全复用main.css样式 -->
+        <div class="live-area">
+            <div class="live-header">
+                <h3 class="live-title">直播间评论区</h3>
+                <span class="viewer-count">在线人数: 19245</span>
+            </div>
+            <div class="comment-area">
+                <div class="comment">
+                    <div class="comment-user">我是网友</div>
+                    <div>这是文本</div>
+                </div>
+                <div class="comment">
+                    <div class="comment-user">我是网友</div>
+                    <div>这是文本</div>
+                </div>
+                <div class="comment">
+                    <div class="comment-user">我是网友</div>
+                    <div>这是文本！</div>
+                </div>
+                <div class="comment">
+                    <div class="comment-user">我是网友</div>
+                    <div>这是文本！</div>
+                </div>
+                <div class="comment">
+                    <div class="comment-user">我是网友</div>
+                    <div>这是文本</div>
+                </div>
+            </div>
+            <div class="comment-input">
+                <input type="text" placeholder="发送你的评论...">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 优化消息显示函数，适配main.css结构（和其他页面一致）
+        function showMessage(message, sceneNum) {
+            // 定位对应场景的文本区域
+            const targetScene = document.getElementById(`scene${sceneNum}`);
+            if (targetScene) {
+                const dialogText = targetScene.querySelector('.narration-text');
+                if (dialogText) {
+                    dialogText.textContent = message;
+                }
+            }
+        }
+        
+        // 保留评论区滚动逻辑
+        function scrollCommentsToBottom() {
+            const commentArea = document.querySelector('.comment-area');
+            if (commentArea) {
+                commentArea.scrollTop = commentArea.scrollHeight;
+            }
+        }
+        
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            scrollCommentsToBottom();
+            // 确保初始场景对话框显示
+            document.querySelector('#scene1 .narration-box').style.opacity = 1;
+        });
+
+        // 场景切换时同步更新对话框显示状态（和其他页面一致）
+        document.querySelectorAll('.scene-link').forEach(link => {
+            link.addEventListener('click', function() {
+                // 隐藏所有对话框
+                document.querySelectorAll('.narration-box').forEach(box => {
+                    box.style.opacity = 0;
+                });
+                // 显示目标场景的对话框
+                setTimeout(() => {
+                    const targetScene = document.querySelector('.scene:target');
+                    if (targetScene) {
+                        targetScene.querySelector('.narration-box').style.opacity = 1;
+                    }
+                }, 100);
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>纸怨——校门</title>
+    <link rel="stylesheet" href="css/main.css">
+    
+    <style>
+        /* ==================== 场景特有样式 ==================== */
+        /* 锁图片样式 */
+        .lock-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 60%;
+            max-height: 60%;
+            z-index: 20;
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .lock-overlay img {
+            width: 100%;
+            height: auto;
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.5);
+            border-radius: 10px;
+        }
+        
+        /* 黑影闪现样式 */
+        .shadow-flash {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 999;
+            display: none;
+            animation: flashAppear 1s ease forwards;
+        }
+        
+        .shadow-flash img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            opacity: 0.7;
+        }
+        
+        /* 雾层样式 */
+        .fog-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(100, 100, 100, 0.5), rgba(120, 120, 120, 0.3));
+            backdrop-filter: blur(2px);
+            z-index: 15;
+            display: none;
+            transition: opacity 2s ease, backdrop-filter 2s ease;
+            pointer-events: none;
+        }
+        
+        /*纸飞机样式*/
+        .paper-plane {
+                position: absolute;
+                width: 70px;
+                height: 70px;
+                background-image: url('res/纸飞机.png');
+                background-size: contain;
+                background-repeat: no-repeat;
+                z-index: 10;
+                pointer-events: none;
+                opacity: 0.8;
+        }
+        
+        /* ==================== 动画关键帧 ==================== */
+        /* 雾散去动画 */
+        @keyframes fogDissipate {
+            0% {
+                opacity: 1;
+                backdrop-filter: blur(2px);
+            }
+            100% {
+                opacity: 0;
+                backdrop-filter: blur(0);
+            }
+        }
+        
+        @keyframes flashAppear {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <a href="map.html" class="map-link">回到地图</a>
+        
+        <div class="scene-area scene-container">
+            <!-- 黑影闪现 -->
+            <div class="shadow-flash" id="shadow-flash">
+                <img src="res/黑影.png" alt="黑影">
+            </div>
+            
+            <!-- 锁图片覆盖层 -->
+            <div class="lock-overlay" id="lock-overlay">
+                <img src="res/锁.jpg" alt="黄铜挂锁">
+            </div>
+            
+            <!-- 场景1：校门外观 -->
+            <div class="scene" id="scene1">
+                <div class="scene-content">
+                    <img src="res/buildings.jpg" alt="教学楼大门外观" class="scene-bg">
+                    <a href="#scene2" class="scene-link" onclick="switchToScene2()"></a>
+                    
+                    <!-- 人物对话容器 -->
+                    <div class="dialogue-container" id="dialogue-container">
+                        <!-- 初始旁白 -->
+                        <div class="narration-box" id="narration-box">
+                            <div class="narration-text" id="narration-content">
+                                你站在校门外，零星路灯亮着，夜风卷着湿冷的尘土扑面而来。你有些冷，后悔穿少了，但还在直播，只能挤出笑颜，继续和观众互动。<br><br>"他们怎么还没来？"你带着一丝抱怨，"不管了，晚晚带各位转转～"
+                            </div>
+                            <div class="dialog-options" id="narration-options">
+                                <button onclick="showNarration('gate')">【观察大门】</button>
+    
+                            </div>
+                        </div>
+                        
+                        <!-- 人物对话框模板（隐藏） -->
+                        <div class="character-box hidden" id="character-template">
+                            <div class="character-content">
+                                <div class="dialog-title" id="character-title">
+                                    <span class="title-icon"></span>
+                                    <span class="character-name"></span>
+                                </div>
+                                <div class="dialog-text" id="character-text"></div>
+                                <div class="dialog-options" id="character-options"></div>
+                            </div>
+                            <div class="character-avatar">
+                                <img id="character-avatar-img" src="" alt="人物立绘">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 场景2：校园内部 -->
+            <div class="scene" id="scene2">
+                <div class="scene-content">
+                    <img src="res/校园内部.png" alt="校园内部" class="scene-bg">
+                    <!-- 移除了场景2的切换箭头 -->
+                    
+                    <!-- 新增纸飞机容器 -->
+                    <div id="paper-plane-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></div>
+                    
+                    <!-- 雾层 -->
+                    <div class="fog-overlay" id="fog-overlay"></div>
+                    
+                    <!-- 场景2的对话容器 -->
+                    <div class="dialogue-container" id="scene2-dialogue-container"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 直播评论区 -->
+        <div class="live-area">
+            <div class="live-header">
+                <h3 class="live-title">直播间评论区</h3>
+                <span class="viewer-count">在线人数: <span id="viewer-count">18923</span></span>
+            </div>
+            
+            <div class="comment-area" id="comment-area">
+            </div>
+            
+            <div class="comment-input">
+                <input type="text" placeholder="发送你的评论...">
+            </div>
+        </div>
+    </div>
+
+    <!-- 音频元素 -->
+    <audio id="bg-audio" src="res/2790.mp3" loop></audio>
+
+    <script>
+        // ==================== 游戏状态管理 ====================
+        const gameState = {
+            currentDialogue: 'init',
+            lockVisible: false,
+            isCharacterDialogueActive: false,
+            currentDialogueIndex: 0,
+            characters: {
+                林晚晴: { position: 'right', color: '#4ecdc4' },
+                赵健: { position: 'left', color: '#ff6b6b' },
+                王鹏: { position: 'left', color: '#95e1d3' },
+                孙薇薇: { position: 'left', color: '#f8a5c2' },
+                沈默言: { position: 'left', color: '#778beb' }
+            }
+        };
+        
+        // 创建单个纸飞机
+        function createPaperPlane() {
+            var container = document.getElementById('paper-plane-container');
+            var plane = document.createElement('div');
+            plane.className = 'paper-plane';
+            
+            var startSide = Math.floor(Math.random() * 4);
+            var startX, startY;
+            
+            switch(startSide) {
+                case 0:
+                    startX = Math.floor(Math.random() * (window.innerWidth + 200)) - 100;
+                    startY = -100;
+                    break;
+                case 1:
+                    startX = window.innerWidth + 100;
+                    startY = Math.floor(Math.random() * (window.innerHeight + 200)) - 100;
+                    break;
+                case 2:
+                    startX = Math.floor(Math.random() * (window.innerWidth + 200)) - 100;
+                    startY = window.innerHeight + 100;
+                    break;
+                case 3:
+                    startX = -100;
+                    startY = Math.floor(Math.random() * (window.innerHeight + 200)) - 100;
+                    break;
+            }
+            
+            var endSide = Math.floor(Math.random() * 4);
+            while (endSide === startSide) {
+                endSide = Math.floor(Math.random() * 4);
+            }
+            
+            var endX, endY;
+            
+            switch(endSide) {
+                case 0:
+                    endX = Math.floor(Math.random() * (window.innerWidth + 200)) - 100;
+                    endY = -100;
+                    break;
+                case 1:
+                    endX = window.innerWidth + 100;
+                    endY = Math.floor(Math.random() * (window.innerHeight + 200)) - 100;
+                    break;
+                case 2:
+                    endX = Math.floor(Math.random() * (window.innerWidth + 200)) - 100;
+                    endY = window.innerHeight + 100;
+                    break;
+                case 3:
+                    endX = -100;
+                    endY = Math.floor(Math.random() * (window.innerHeight + 200)) - 100;
+                    break;
+            }
+            
+            var startRotateDeg = Math.floor(Math.random() * 360);
+            var endRotateDeg = startRotateDeg + Math.floor(Math.random() * 720) + 360;
+            var flyTime = 3 + Math.random() * 5;
+            var scale = 0.5 + Math.random() * 1.0;
+            
+            plane.style.left = startX + 'px';
+            plane.style.top = startY + 'px';
+            plane.style.transform = 'rotate(' + startRotateDeg + 'deg) scale(' + scale + ')';
+            
+            container.appendChild(plane);
+            
+            setTimeout(function() {
+                plane.style.transition = 'all ' + flyTime + 's cubic-bezier(0.2, 0.8, 0.8, 0.2)';
+                setTimeout(function() {
+                    plane.style.left = endX + 'px';
+                    plane.style.top = endY + 'px';
+                    plane.style.opacity = '1';
+                    plane.style.transform = 'rotate(' + endRotateDeg + 'deg) scale(' + scale + ')';
+                }, 10);
+                
+                setTimeout(function() {
+                    if (plane.parentNode) {
+                        plane.remove();
+                    }
+                }, flyTime * 1000 + 100);
+            }, 10);
+        }
+        
+        // 批量创建纸飞机
+        function startPaperPlaneAnimation() {
+            var container = document.getElementById('paper-plane-container');
+            if (container) container.innerHTML = '';
+            
+            var totalPlanes = 20;
+            var initialPlanes = 8;
+            
+            for (var i = 0; i < initialPlanes; i++) {
+                createPaperPlane();
+            }
+            
+            var remaining = totalPlanes - initialPlanes;
+            for (var j = 0; j < remaining; j++) {
+                setTimeout(createPaperPlane, (j + 1) * 300);
+            }
+        }
+        
+        // ==================== 场景1文本内容 ====================
+        const textContent = {
+            init: '你站在校门外，零星路灯亮着，夜风卷着湿冷的尘土扑面而来。你有些冷，后悔穿少了，但还在直播，只能挤出笑颜，继续和观众互动。"他们怎么还没来？"你带着一丝抱怨，"不管了，晚晚带各位转转～"',
+            gate: '这曾是气派的铸铁大门，现已锈死，门轴扭曲，暗红锈迹从栏杆缝隙渗出，像干涸多年的血。门柱上"XX中学"四字模糊不清，漆皮剥落只剩残痕。<br><br>你上前推了推，大门发出腐朽的咯吱声，刺耳得让牙齿发酸。',
+            new_lock: '这不是常见的工地链锁或生锈U型锁，而是把崭新的黄铜挂锁，昏暗里仍泛着锃亮光泽，与周围腐朽环境格格不入。',
+            surroundings: '枯藤从墙头垂下，缠绕断瓦残垣，像无数黑色手臂缓缓蠕动。地面铺满碎玻璃与腐叶，踩上去"咔嚓"作响，不像枯枝碎裂，倒像骨头被碾断。每一步，都像惊醒了沉睡的东西。<br><br>远处教学楼窗户透着微光——不是灯光也非月光，浑浊青灰，像水底浮起的反光，湿漉漉黏在玻璃上，映出扭曲轮廓。光晕中央的窗内，似乎站着个人影。<br><br>你与"她"对视，不禁尖叫："啊！——"'
+        };
+        
+        // ==================== 弹幕内容 ====================
+        const commentsData = {
+            init: [
+				{ user: '游客123', text:'晚晚老婆我来啦~'},
+				{ user: '探险爱好者', text:'主播晚上好，晚晚今天好美！'},
+                { user: '我', text: '哇塞！真人恐怖剧本杀！这么刺激？！' },
+                { user: '是', text: '真的假的啊？大手笔啊，为了这个剧本杀还特意找了场地吗？' },
+                { user: '网', text: '已经开始了吗？这么沉浸吗？' },
+                { user: '友', text: '刚来，这是什么情况？晚晚要改行了？我还想看主播辣舞来着（可惜）' },
+                { user: '我是网友', text: '今天居然是恐怖part？期待住了' },
+                { user: '我是网友', text: '快进到主播被吓哭！' },
+                { user: '我是网友', text: '就晚晚一个人吗？还有谁啊？' },
+                { user: '我是网友', text: '晚晚别怕，怕的话躲我怀里（猥琐笑）' },
+                { user: '我是网友', text: '不会是来搞噱头吧' }
+            ],
+            gate_initial: [
+                { user: '网友', text: '好黑啊，啥也看不清' },
+                { user: '网友', text: '有内味了' },
+                { user: '网友', text: '舞蹈区主播转型恐怖冒险了？' },
+                { user: '网友', text: '这真是你们学校？太破了' },
+                { user: '网友', text: '接接接' },
+                { user: '网友', text: '接学校被拆（斜眼笑）' },
+                { user: '网友', text: '求弹幕护体' },
+                { user: '网友', text: '不会有突脸吧...' },
+                { user: '网友', text: '群众里有坏人！' }
+            ],
+            gate_lock: [
+                { user: '网友', text: '嗯？门上有锁？' },
+                { user: '网友', text: '废弃学校怎么有新锁？' },
+                { user: '网友', text: '专门等主播呢' },
+                { user: '网友', text: '工作人员安排的吧' },
+                { user: '网友', text: '钥匙在谁那？' }
+            ],
+            surroundings_scare: [
+                { user: '网友', text: '吓我一跳！' },
+                { user: '网友', text: '没被画面吓到，被主播声音吓到了...' },
+                { user: '网友', text: '鬼...刚刚那栋楼有鬼！' },
+                { user: '网友', text: '哪呢？别自己吓自己' },
+                { user: '网友', text: '主播有灵视功能？' },
+                { user: '网友', text: '哪有鬼啊' },
+                { user: '网友', text: '心里有鬼看啥都像鬼' }
+            ],
+            surroundings_after: [
+                { user: '网友', text: '晚晚好坏！' },
+                { user: '网友', text: '好怕怕哦～' },
+                { user: '网友', text: '说好的剧本杀呢，咋还不开始！' }
+            ],
+            character_arrive_zhaojian: [
+                { user: '网友', text: '哇！有人来了！' },
+                { user: '网友', text: '肌肉男！我可以！' },
+                { user: '网友', text: '这纹身好酷' },
+                { user: '网友', text: '晚晴的熟人？' }
+            ],
+            character_arrive_idcard: [
+                { user: '网友', text: '报身份证笑死我了' }
+            ],
+            character_arrive_wangpeng: [
+                { user: '网友', text: '后面还有个人' },
+                { user: '网友', text: '这个好害羞的样子' },
+                { user: '网友', text: '尬住了尬住了' }
+            ],
+            character_arrive_sunweiwei: [
+                { user: '网友', text: '哟，又来一个' },
+                { user: '网友', text: '这女的好能说' },
+                { user: '网友', text: '火药味来了' },
+                { user: '网友', text: '主播暗讽技能拉满' },
+                { user: '网友', text: '哈哈哈小网红' }
+            ],
+            character_arrive_shenmoyan: [
+                { user: '网友', text: '谁迟到了？' },
+                { user: '网友', text: '班长还没来？' }
+            ],
+            shadow_flash: [
+                { user: '网友', text: '卧槽！什么鬼东西！' },
+                { user: '网友', text: '刚刚那是什么？！' },
+                { user: '网友', text: '黑影！我看见了！' },
+                { user: '网友', text: '高能预警！' },
+                { user: '网友', text: '吓死宝宝了' },
+                { user: '网友', text: '门怎么自己开了？！' },
+                { user: '网友', text: '门后有人！' },
+                { user: '网友', text: '悄无声息的，鬼啊！' },
+                { user: '网友', text: '赵健都被吓到了' },
+                { user: '网友', text: '孙薇薇尖叫了' }
+            ],
+			scene2_arrival: [
+			    { user: '网友', text: '哇，进去了进去了！' },
+			    { user: '网友', text: '这氛围感拉满了' }
+			],
+			scene2_confucius: [
+			    { user: '网友', text: '孔子像好诡异' },
+			    { user: '网友', text: '雕像在笑？我眼花了？' }
+			],
+			scene2_memory: [
+			    { user: '网友', text: '开始回忆杀了' },
+			    { user: '网友', text: '主播当年这么厉害啊' }
+			],
+			scene2_paper_planes: [
+			    { user: '网友', text: '卧槽！纸飞机雨！' },
+			    { user: '网友', text: '这特效牛逼啊' }
+			],
+			scene2_messages: [
+			    { user: '网友', text: '纸飞机上有字！' },
+			    { user: '网友', text: '每个人的都不一样，细思极恐' }
+			]
+        };
+        
+        // ==================== 场景1人物对话序列（统一格式） ====================
+        const dialogueSequence = [
+            // 赵健到达部分
+            {
+                type: 'character',
+                character: '赵健',
+                text: '哟！林大小姐！听沈默言说你要来，我还不信呢！',
+                avatar: 'res/赵健.png',
+                commentTrigger: 'character_arrive_zhaojian'
+            },
+            {
+                type: 'character',
+                character: '林晚晴',
+                text: '啊！你是...当初的体育委员！',
+                avatar: 'res/林晚晴.png'
+            },
+            {
+                type: 'character',
+                character: '赵健',
+                text: '对对，我是赵健，现在做健身教练。你现在做什么...比以前更漂亮了。',
+                avatar: 'res/赵健.png'
+            },
+            {
+                type: 'character',
+                character: '林晚晴',
+                text: '我在直播哦～来，赵哥，和观众打个招呼。',
+                avatar: 'res/林晚晴.png'
+            },
+            {
+                type: 'character',
+                character: '赵健',
+                text: '这么多人啊，大家好！我是晚晴高中同学，健身教练，身高185，体重78公斤，喜欢拳击...',
+                avatar: 'res/赵健.png',
+                commentTrigger: 'character_arrive_idcard'
+            },
+            {
+                type: 'character',
+                character: '林晚晴',
+                text: '好了好了，再说要报身份证了。',
+                avatar: 'res/林晚晴.png'
+            },
+            // 王鹏到达部分
+            {
+                type: 'character',
+                character: '王鹏',
+                text: '晚、晚晴姐，你，你好，久、好久不见...',
+                avatar: 'res/王鹏.png',
+                commentTrigger: 'character_arrive_wangpeng'
+            },
+            {
+                type: 'character',
+                character: '赵健',
+                text: '这是王鹏，跟我一起来的！还是老样子，闷葫芦一个，哈哈！到时候被鬼吓哭可别喊妈。',
+                avatar: 'res/赵健.png'
+            },
+            {
+                type: 'character',
+                character: '王鹏',
+                text: '...',
+                avatar: 'res/王鹏.png',
+                silent: true
+            },
+            {
+                type: 'character',
+                character: '林晚晴',
+                text: '你好王鹏，好久不见，我打算直播今天的剧本杀，不介意吧？',
+                avatar: 'res/林晚晴.png'
+            },
+            {
+                type: 'character',
+                character: '王鹏',
+                text: '嗯...',
+                avatar: 'res/王鹏.png'
+            },
+            // 孙薇薇到达部分
+            {
+                type: 'character',
+                character: '孙薇薇',
+                text: '哈喽晚上好～诶哟晚晴姐～可想死你了～上次聚会想打招呼，你走太快了——',
+                avatar: 'res/孙薇薇.png',
+                commentTrigger: 'character_arrive_sunweiwei'
+            },
+            {
+                type: 'character',
+                character: '林晚晴',
+                text: '啊！薇薇也来了。',
+                avatar: 'res/林晚晴.png',
+                innerThought: '（心底翻了个白眼：这烦人精怎么来了）'
+            },
+            {
+                type: 'character',
+                character: '林晚晴',
+                text: '上次聚会你也在？抱歉啊，以为那边都是小网红，就没过去。你该来找我的！',
+                avatar: 'res/林晚晴.png'
+            },
+            {
+                type: 'character',
+                character: '孙薇薇',
+                text: '晚晴姐人气好高，今晚人数是平时好几倍呢。观众们好，我叫孙薇薇，AC站有账号"薇薇要努力鸭"，感兴趣的关注下哦～',
+                avatar: 'res/孙薇薇.png'
+            },
+            // 询问沈默言部分
+            {
+                type: 'character',
+                character: '林晚晴',
+                text: '对了，沈默言呢？不是他邀请我们玩剧本杀的吗？',
+                avatar: 'res/林晚晴.png',
+                commentTrigger: 'character_arrive_shenmoyan'
+            },
+            {
+                type: 'character',
+                character: '赵健',
+                text: '对啊，班长居然最后到，架子真大！',
+                avatar: 'res/赵健.png'
+            },
+            {
+                type: 'character',
+                character: '王鹏',
+                text: '...',
+                avatar: 'res/王鹏.png',
+                silent: true
+            },
+        ];
+        
+        // ==================== 沈默言到达的对话（统一格式） ====================
+        const silentArrivalDialogue = [
+            { 
+                type: 'character',
+                character: '赵健', 
+                text: '卧、卧槽！沈默言？你什么时候进去的？', 
+                avatar: 'res/赵健.png' 
+            },
+            { 
+                type: 'character',
+                character: '孙薇薇', 
+                text: '吓死我了，你怎么不吭声，跟鬼一样。', 
+                avatar: 'res/孙薇薇.png' 
+            },
+            { 
+                type: 'character',
+                character: '沈默言', 
+                text: '大家都到齐了，开始游戏吧。', 
+                avatar: 'res/沈默言.png' 
+            },
+            { 
+                type: 'character',
+                character: '沈默言', 
+                text: '介绍下规则：这所学校七年前有跳楼事件，后来出现很多怪事：<br><br>1. 教学楼2楼楼梯，晚上正着数12阶，倒着数13阶；<br>2. 厕所水龙头晚上流出的不是水而是血；<br>3. 墙上挂画，晚上用手电筒照会动；<br>4. 厕所最后一个隔间常年打不开，晚上会自己打开，有手伸出来；<br>5. 教学楼天台有白衣女人飘荡，常能听见笑声和哭声。<br><br>身份牌已发给大家，今夜探索废弃教学楼，找线索拼真相——是真闹鬼，还是有人装神弄鬼。祝好运。', 
+                avatar: 'res/沈默言.png' 
+            },
+            { 
+                type: 'character',
+                character: '王鹏', 
+                text: '等一下。那你呢？主持人？NPC？可能是凶手吗？', 
+                avatar: 'res/王鹏.png' 
+            },
+            { 
+                type: 'character',
+                character: '沈默言', 
+                text: '别急，剧本杀还有自我介绍环节。你们知道身份，但观众还不知道。', 
+                avatar: 'res/沈默言.png' 
+            },
+            { 
+                type: 'character',
+                character: '林晚晴', 
+                text: '说得是，别在门口站着了，进去吧。', 
+                avatar: 'res/林晚晴.png' 
+            },
+            { 
+                type: 'character',
+                character: '赵健', 
+                text: '走！', 
+                avatar: 'res/赵健.png', 
+                action: '赵健拉着王鹏率先走进校门' 
+            },
+            { 
+                type: 'character',
+                character: '孙薇薇', 
+                text: '晚晴姐，我们也走嘛，我胆子小，你罩着我啊～', 
+                avatar: 'res/孙薇薇.png', 
+                action: '她强硬挽住你胳膊往前拽' 
+            },
+            { 
+                type: 'character',
+                character: '林晚晴', 
+                text: '...', 
+                avatar: 'res/林晚晴.png', 
+                innerThought: '（你最后看了眼沈默言，他面无表情盯着你，你心里一哆嗦。再细看，他面容又晦暗不明。你吞下疑惑，踏进前方熟悉又陌生的地方。）<br><br>一股不详预感萦绕心头。<br><br><span style="color: #ffcc00;">提示：点击右上角，进入校园。</span>' 
+            }
+        ];
+        
+        // ==================== 场景2对话序列 ====================
+        const scene2DialogueSequence = [
+            {
+                type: 'narration',
+                content: '再次踏入这所高中，你以为你或多或少会有点情绪起伏，事实上，你心如止水。这所高中带给你过什么深刻的印象吗？唔，你忘了。<br><br>现在它唯一的价值是给你的直播增添噱头。',
+                commentTrigger: 'scene2_arrival'
+			},
+            {
+                type: 'narration',
+                content: '你举着手机带着观众环绕四周，其他人都开了手电筒照明，天色本就昏暗，地上的影子被拉得老长老长，建筑物的、人类的、杂草树木的……交叠在一起，像是合成了一个巨大的"怪物"。<br><br>空气里混杂着潮湿苔藓、铁锈风尘的味道。'
+            },
+            {
+                type: 'narration',
+                content: '你们穿过曾经的迎宾大道，眼前豁然开朗。<br><br>这是一个中心广场，曾经光洁的水泥路、刻画了各种小巧思的地砖现如今已经被疯长的杂草撕裂，在夜风中张牙舞爪。'
+            },
+            {
+                type: 'narration',
+                content: '最中心是一尊孔子像。<br><br>你疑惑："学校搬家怎么没搬走这孔子像？"<br><br>这雕像依旧静静矗立在那里，须发垂然，神情慈祥，面容温厚，双手交叠于胸作拱手礼状。<br>只是雕像底座密密麻麻地爬满了藤蔓，一直向上延伸至极点。时间的流逝充分体现在上面，掉漆、缺角，面目全非，更添诡异。',
+                commentTrigger: 'scene2_confucius'
+			},
+            {
+                type: 'character',
+                character: '赵健',
+                text: '估计那群老家伙懒得搬呗。',
+                avatar: 'res/赵健.png'
+            },
+            {
+                type: 'character',
+                character: '孙薇薇',
+                text: '哎呀，我一看到这孔子像整个人都不好了～啊，我没有不尊重孔子的意思。就是回忆起高中那段痛苦时光。',
+                avatar: 'res/孙薇薇.png'
+            },
+            {
+                type: 'character',
+                character: '赵健',
+                text: '诶你别说你别说，当时老李天天逮着我整，为哥的勇往直前的青春增添了重重障碍。',
+                avatar: 'res/赵健.png',
+                action: '（故作苦恼，惹笑了不少人）'
+            },
+            {
+                type: 'character',
+                character: '林晚晴',
+                text: '还不是你当时只知道打球打球，还老往天台那边跑，作业也不好好交，老李不盯你盯谁？',
+                avatar: 'res/林晚晴.png'
+            },
+            {
+                type: 'character',
+                character: '赵健',
+                text: '别骂了别骂了，我哪像晚晴姐你啊，次次考试拿第一，期期上台领奖，年年晚会主持人啊！可牛逼了。',
+                avatar: 'res/赵健.png'
+            },
+            {
+                type: 'character',
+                character: '林晚晴',
+                text: '...',
+                avatar: 'res/林晚晴.png',
+                innerThought: '（你微微一笑，接受了吹捧。）'
+            },
+            {
+                type: 'character',
+                character: '孙薇薇',
+                text: '就是就是，除了高三上期那几次没发挥好，晚晴姐的成就简直令人望尘莫及啊，我等普通人生下来就是来凑数的。',
+                avatar: 'res/孙薇薇.png',
+				commentTrigger: 'scene2_memory'
+            },
+            {
+                type: 'character',
+                character: '孙薇薇',
+                text: '诶，还有我们的王鹏同学，这些年没咋变啊，我可是记得你……',
+                avatar: 'res/孙薇薇.png'
+            },
+            {
+                type: 'narration',
+                content: '你现在确信孙薇薇不是故意的就是情商跌进马里亚纳海沟。<br><br>你们的插科打诨似乎驱散了埋在心里的不安，一时间布满了欢乐的气息。'
+            },
+            {
+                type: 'narration',
+                content: '啪嗒啪嗒，你转眸看去，沈默言踩着一地枯枝败叶踱步而来，胜似闲庭信步，正好打断了赵健将要抖落的糗事。'
+            },
+            {
+                type: 'character',
+                character: '沈默言',
+                text: '各位怎么不继续走了？我们在天台集合，那里有圆桌，适合集中讨论。',
+                avatar: 'res/沈默言.png'
+            },
+            {
+                type: 'narration',
+                content: '话音刚落，你感觉到你的头顶被什么东西砸到，不重。你皱着眉拿下，还未看清是什么，孙薇薇的尖叫先一步侵入你的大脑。',
+                action: function() {
+                    startPaperPlaneAnimation();
+                },
+				commentTrigger: 'scene2_paper_planes'
+            },
+            {
+                type: 'character',
+                character: '孙薇薇',
+                text: '怎、怎么这么多纸飞机！',
+                avatar: 'res/孙薇薇.png'
+            },
+            {
+                type: 'narration',
+                content: '你这才看清手里的东西——用粗糙土黄纸料叠成的纸飞机。<br><br>还没完，天上纷纷扬扬地下起了纸飞机雨，如纸钱般漫天飞舞，铺天盖地地砸向你们。<br><br>这场景，诡异到了极点。'
+            },
+            {
+                type: 'narration',
+                content: '这是一场欢迎仪式，宣告游戏的开始。<br><br>这还是一次祭奠。一场为逝者……亦或即将死去的人举办的巨大葬礼。'
+            },
+            {
+                type: 'narration',
+                content: '你还来不及思考这些纸飞机从哪飞进来的，只慌慌张张尽力躲避被砸。你的心情真是糟糕透了。<br><br>你欲质问沈默言又在搞什么鬼。'
+            },
+            {
+                type: 'character',
+                character: '王鹏',
+                text: '纸飞机里有字！',
+                avatar: 'res/王鹏.png',
+				commentTrigger: 'scene2_messages'
+            },
+            {
+                type: 'narration',
+                content: '你半信半疑地打开你手里的那一只，映入眼帘的文字触目惊心——<br><br>抓住你啦<br>嘻嘻嘻<br>和我一起下地狱吧<br>嘻嘻嘻<br><br>血红色的、歪歪扭扭的笔画拼凑了这几段话。'
+            },
+            {
+                type: 'character',
+                character: '王鹏',
+                text: '欢迎回到地狱<br>自私，虚荣，自大，懦弱的你',
+                avatar: 'res/王鹏.png'
+            },
+            {
+                type: 'character',
+                character: '赵健',
+                text: '我也看到了！"欠债还钱，天经地义，你的命，我要定了"！',
+                avatar: 'res/赵健.png'
+            },
+            {
+                type: 'character',
+                character: '赵健',
+                text: '这他妈什么鬼东西！',
+                avatar: 'res/赵健.png'
+            },
+            {
+                type: 'character',
+                character: '孙薇薇',
+                text: '我的上面写着……"虚伪的眼泪，可换不来原谅"……这、这太吓人了！',
+                avatar: 'res/孙薇薇.png',
+                action: '（声音发颤）'
+            },
+            {
+                type: 'character',
+                character: '赵健',
+                text: '赵健开始仰头看天空，嘴里念念有词："这有无人机吗？怎么倒下来的。不对不对，说不定是从什么地方飞过来的？还是有一张超级巨大的网兜着？我们居然没有发现。好吓人啊！"',
+                avatar: 'res/赵健.png'
+            },
+            {
+                type: 'character',
+                character: '王鹏',
+                text: '这些纸飞机……似乎专门针对我们每个人。',
+                avatar: 'res/王鹏.png',
+                action: '（声音低沉）'
+            },
+            {
+                type: 'character',
+                character: '林晚晴',
+                text: '沈默言，这到底是怎么回事？这就是你说的剧本杀？',
+                avatar: 'res/林晚晴.png'
+            },
+            {
+                type: 'narration',
+                content: '这时，沈默言似乎瞥了一眼你的直播设备：'
+            },
+            {
+                type: 'character',
+                character: '沈默言',
+                text: '灵异事件又发生了，大家别害怕，我们赶紧去天台那里，争取早点找到真相，抓出那只"鬼"。',
+                avatar: 'res/沈默言.png'
+            },
+            {
+                type: 'character',
+                character: '赵健',
+                text: '等一下！沈默言，你是不是知道些什么？这些纸飞机上的话，分明就是在针对我们！',
+                avatar: 'res/赵健.png'
+            },
+            {
+                type: 'character',
+                character: '沈默言',
+                text: '赵健，冷静。这只是剧本的一部分。记住，我们是在玩一个游戏，找线索，解谜题。',
+                avatar: 'res/沈默言.png'
+            },
+            {
+                type: 'character',
+                character: '林晚晴',
+                text: '……好吧。那我们现在就去天台。',
+                avatar: 'res/林晚晴.png',
+                innerThought: '（你心里明白事情没那么简单，但为了直播，你只能硬着头皮继续。）'
+            },
+            {
+                type: 'narration',
+                content: '话落，沈默言率先迈步离开此处。<br><br>你们惊疑不定，但别无他法，只好也跟上去。'
+            },
+            {
+                type: 'narration',
+                content: '路过孔子像时，你好像看到了孔子咧开嘴笑了，残破的面容显得无比恐怖。<br><br>你疑心自己看错了，但同伴已经走远，你来不及细究，一路小跑追上去。<br><br><span style="color: #ffcc00;">提示：请回到地图，开始天台剧情</span>'
+            }
+        ];
+        
+        // ==================== 状态管理 ====================
+        const scene2State = {
+            currentIndex: 0,
+            isPlaying: false
+        };
+        
+        // ==================== DOM元素引用 ====================
+        const elements = {
+            narrationBox: document.getElementById('narration-box'),
+            narrationContent: document.getElementById('narration-content'),
+            narrationOptions: document.getElementById('narration-options'),
+            characterTemplate: document.getElementById('character-template'),
+            dialogueContainer: document.getElementById('dialogue-container'),
+            lockOverlay: document.getElementById('lock-overlay'),
+            shadowFlash: document.getElementById('shadow-flash'),
+            commentArea: document.getElementById('comment-area'),
+            bgAudio: document.getElementById('bg-audio'),
+            viewerCount: document.getElementById('viewer-count')
+        };
+        
+        // ==================== 雾效果函数 ====================
+        function showFog() {
+            const fogOverlay = document.getElementById('fog-overlay');
+            if (fogOverlay) {
+                fogOverlay.style.display = 'block';
+                setTimeout(() => {
+                    fogOverlay.style.opacity = '1';
+                }, 10);
+            }
+        }
+        
+        function hideFog() {
+            const fogOverlay = document.getElementById('fog-overlay');
+            if (fogOverlay) {
+                fogOverlay.style.animation = 'fogDissipate 3s ease forwards';
+                setTimeout(() => {
+                    fogOverlay.style.display = 'none';
+                    fogOverlay.style.animation = '';
+                }, 3000);
+            }
+        }
+        
+        function hideFogImmediately() {
+            const fogOverlay = document.getElementById('fog-overlay');
+            if (fogOverlay) {
+                fogOverlay.style.display = 'none';
+                fogOverlay.style.opacity = '0';
+                fogOverlay.style.animation = '';
+            }
+        }
+        
+        // ==================== 场景1函数 ====================
+        function showNarration(type) {
+            gameState.currentDialogue = type;
+            
+            document.querySelectorAll('.character-box').forEach(box => {
+                if (!box.id.includes('template')) {
+                    box.remove();
+                }
+            });
+            
+            elements.narrationBox.classList.remove('hidden');
+            elements.narrationContent.innerHTML = textContent[type];
+            setNarrationButtons(type);
+            showCommentsForType(type);
+            
+            if (type === 'new_lock') {
+                showLock();
+            } else if (type === 'surroundings' && gameState.lockVisible) {
+                hideLock();
+            }
+            
+            elements.narrationBox.style.opacity = '1';
+        }
+        
+        function showCommentsForType(type) {
+            let commentKeys = [];
+            switch(type) {
+                case 'init': commentKeys = ['init']; break;
+                case 'gate': commentKeys = ['gate_initial']; break;
+                case 'new_lock': commentKeys = ['gate_lock']; break;
+                case 'surroundings': commentKeys = ['surroundings_scare', 'surroundings_after']; break;
+            }
+            commentKeys.forEach(key => {
+                if (commentsData[key]) {
+                    addComments(commentsData[key], 500);
+                }
+            });
+        }
+        
+        function showLock() {
+            elements.lockOverlay.style.display = 'block';
+            gameState.lockVisible = true;
+        }
+        
+        function hideLock() {
+            elements.lockOverlay.style.display = 'none';
+            gameState.lockVisible = false;
+        }
+        
+        function setNarrationButtons(type) {
+            switch(type) {
+                case 'init':
+                    elements.narrationOptions.innerHTML = `
+                        <button onclick="showNarration('gate')">【观察大门】</button>
+                    `;
+                    break;
+                case 'gate':
+                    elements.narrationOptions.innerHTML = `
+                        <button onclick="showNarration('new_lock')">【详细查看】</button>
+                    `;
+                    break;
+                case 'new_lock':
+                    elements.narrationOptions.innerHTML = `
+                        <button onclick="showNarration('surroundings')">【观察周围】</button>
+                    `;
+                    break;
+                case 'surroundings':
+                    elements.narrationOptions.innerHTML = `
+                        <button onclick="startFirstCharacterDialogue()">【继续】</button>
+                    `;
+                    break;
+            }
+        }
+        
+        function startFirstCharacterDialogue() {
+            gameState.isCharacterDialogueActive = true;
+            gameState.currentDialogueIndex = 0;
+            playNextDialogue();
+        }
+        
+        // 统一的显示对话函数
+        function showDialogue(dialogue) {
+            if (dialogue.type === 'character') {
+                return showCharacterDialogue(
+                    dialogue.character,
+                    dialogue.text,
+                    dialogue.avatar,
+                    dialogue.innerThought || '',
+                    dialogue.action || ''
+                );
+            }
+            return null;
+        }
+        
+        function showCharacterDialogue(character, text, avatar, innerThought = '', action = '') {
+            const charConfig = gameState.characters[character];
+            const dialogueBox = elements.characterTemplate.cloneNode(true);
+            dialogueBox.id = `dialogue-${Date.now()}`;
+            dialogueBox.classList.remove('hidden');
+            
+            const titleIcon = dialogueBox.querySelector('.title-icon');
+            const characterName = dialogueBox.querySelector('.character-name');
+            const characterText = dialogueBox.querySelector('.dialog-text');
+            const avatarImg = dialogueBox.querySelector('#character-avatar-img');
+            
+            titleIcon.style.backgroundColor = charConfig.color;
+            characterName.textContent = character;
+            
+            let fullText = text;
+            if (innerThought) fullText += `<br><br><em style="color: #aaa;">${innerThought}</em>`;
+            if (action) fullText += `<br><br><span style="color: #ffcc00;">${action}</span>`;
+            characterText.innerHTML = fullText;
+            
+            avatarImg.src = avatar;
+            
+            if (charConfig.position === 'right') {
+                dialogueBox.style.flexDirection = 'row-reverse';
+            } else {
+                dialogueBox.style.flexDirection = 'row';
+            }
+            
+            elements.dialogueContainer.appendChild(dialogueBox);
+            
+            document.querySelectorAll('.character-box').forEach(box => {
+                if (box !== dialogueBox && !box.id.includes('template')) {
+                    box.classList.add('hidden');
+                }
+            });
+            
+            elements.narrationBox.classList.add('hidden');
+            
+            setTimeout(() => {
+                dialogueBox.style.opacity = '1';
+            }, 10);
+            
+            return dialogueBox;
+        }
+        
+        function playNextDialogue() {
+            if (!gameState.isCharacterDialogueActive) return;
+            
+            if (gameState.currentDialogueIndex >= dialogueSequence.length) {
+                triggerShadowFlash();
+                return;
+            }
+            
+            const dialogue = dialogueSequence[gameState.currentDialogueIndex];
+            
+            if (dialogue.commentTrigger && commentsData[dialogue.commentTrigger]) {
+                addComments(commentsData[dialogue.commentTrigger], 500);
+            }
+            
+            if (dialogue.silent) {
+                gameState.currentDialogueIndex++;
+                setTimeout(playNextDialogue, 300);
+                return;
+            }
+            
+            const dialogueBox = showDialogue(dialogue);
+            
+            if (dialogueBox) {
+                const optionsDiv = dialogueBox.querySelector('.dialog-options');
+                optionsDiv.innerHTML = `<button onclick="nextDialogue()">【继续】</button>`;
+            }
+        }
+        
+        function nextDialogue() {
+            gameState.currentDialogueIndex++;
+            playNextDialogue();
+        }
+        
+        function triggerShadowFlash() {
+            gameState.isCharacterDialogueActive = false;
+            elements.shadowFlash.style.display = 'block';
+            
+            setTimeout(() => {
+                addComments(commentsData.shadow_flash, 200);
+            }, 500);
+            
+            setTimeout(() => {
+                elements.shadowFlash.style.display = 'none';
+                startSilentArrival();
+            }, 1000);
+        }
+        
+        function startSilentArrival() {
+            gameState.isCharacterDialogueActive = true;
+            gameState.currentDialogueIndex = 0;
+            playNextSilentDialogue();
+        }
+        
+        function playNextSilentDialogue() {
+            if (gameState.currentDialogueIndex >= silentArrivalDialogue.length) {
+                return;
+            }
+            
+            const dialogue = silentArrivalDialogue[gameState.currentDialogueIndex];
+            const dialogueBox = showDialogue(dialogue);
+            
+            if (dialogueBox) {
+                const optionsDiv = dialogueBox.querySelector('.dialog-options');
+                optionsDiv.innerHTML = `<button onclick="nextSilentDialogue()">【继续】</button>`;
+            }
+        }
+        
+        function nextSilentDialogue() {
+            gameState.currentDialogueIndex++;
+            playNextSilentDialogue();
+        }
+        
+        // ==================== 场景2函数 ====================
+        function switchToScene2() {
+            hideSceneContent();
+            
+            setTimeout(() => {
+                scene2State.currentIndex = 0;
+                scene2State.isPlaying = false;
+                
+                hideFogImmediately();
+                
+                const scene2Container = document.getElementById('scene2-dialogue-container');
+                if (scene2Container) {
+                    scene2Container.innerHTML = '';
+                }
+                
+                startScene2FogSequence();
+            }, 500);
+        }
+        
+        function startScene2FogSequence() {
+            if (window.location.hash !== '#scene2') {
+                window.location.hash = '#scene2';
+                setTimeout(startScene2FogSequence, 100);
+                return;
+            }
+            
+            showFog();
+            
+            setTimeout(() => {
+                showFogNarration(scene2DialogueSequence[0].content);
+            }, 1000);
+        }
+        
+        function showFogNarration(content) {
+            const container = document.getElementById('scene2-dialogue-container');
+            container.innerHTML = '';
+            
+            const narrationBox = document.createElement('div');
+            narrationBox.className = 'narration-box';
+            
+            narrationBox.innerHTML = `
+                <div class="dialog-title">
+                    <span style="display:inline-block;width:20px;height:20px;background-color:#4ecdc4;border-radius:50%;text-align:center;line-height:20px;"></span>
+                    林晚晴（内心OS）
+                </div>
+                <div class="narration-text">${content}</div>
+                <div class="dialog-options">
+                    <button onclick="continueAfterFogDialogue()">【继续】</button>
+                </div>
+            `;
+            
+            container.appendChild(narrationBox);
+            
+            setTimeout(() => {
+                narrationBox.style.opacity = '1';
+            }, 10);
+        }
+        
+        function continueAfterFogDialogue() {
+            const container = document.getElementById('scene2-dialogue-container');
+            container.innerHTML = '';
+            
+            hideFog();
+            
+            setTimeout(() => {
+                startScene2ScriptDialogue();
+            }, 2000);
+        }
+        
+        function startScene2ScriptDialogue() {
+            scene2State.isPlaying = true;
+            scene2State.currentIndex = 1;
+            playNextScene2Dialogue();
+        }
+        
+        function playNextScene2Dialogue() {
+            if (scene2State.currentIndex >= scene2DialogueSequence.length) {
+                return;
+            }
+            
+            const dialogue = scene2DialogueSequence[scene2State.currentIndex];
+            
+            const container = document.getElementById('scene2-dialogue-container');
+            container.innerHTML = '';
+            
+            if (dialogue.type === 'narration') {
+                const actionCallback = dialogue.action || null;
+                showScene2DialogueNarration(dialogue.content, actionCallback);
+            } else if (dialogue.type === 'character') {
+                showScene2CharacterDialogue(dialogue);
+            }
+        }
+        
+        function showScene2DialogueNarration(content, actionCallback) {
+            const container = document.getElementById('scene2-dialogue-container');
+            // 检查是否需要触发弹幕
+            const currentDialogue = scene2DialogueSequence[scene2State.currentIndex];
+            if (currentDialogue && currentDialogue.commentTrigger && commentsData[currentDialogue.commentTrigger]) {
+                    addComments(commentsData[currentDialogue.commentTrigger], 500);
+            }
+            const narrationBox = document.createElement('div');
+            narrationBox.className = 'narration-box';
+            
+            narrationBox.innerHTML = `
+                <div class="dialog-title">
+                    <span style="display:inline-block;width:20px;height:20px;background-color:#4ecdc4;border-radius:50%;text-align:center;line-height:20px;"></span>
+                    旁白
+                </div>
+                <div class="narration-text">${content}</div>
+                <div class="dialog-options">
+                    <button onclick="nextScene2Dialogue()">【继续】</button>
+                </div>
+            `;
+            
+            container.appendChild(narrationBox);
+            
+            setTimeout(() => {
+                narrationBox.style.opacity = '1';
+            }, 10);
+            
+            if (typeof actionCallback === 'function') {
+                actionCallback();
+            }
+        }
+        
+        function showScene2CharacterDialogue(dialogue) {
+			// 检查是否需要触发弹幕
+			if (dialogue.commentTrigger && commentsData[dialogue.commentTrigger]) {
+			        addComments(commentsData[dialogue.commentTrigger], 500);
+			}
+            const charConfig = gameState.characters[dialogue.character];
+            const container = document.getElementById('scene2-dialogue-container');
+            
+            const dialogueBox = document.createElement('div');
+            dialogueBox.className = 'character-box';
+            
+            let innerHTML = '';
+            let textContent = dialogue.text;
+            
+            if (dialogue.innerThought) {
+                textContent += `<br><br><em style="color: #aaa;">${dialogue.innerThought}</em>`;
+            }
+            
+            if (dialogue.action && typeof dialogue.action === 'string') {
+                textContent += `<br><br><span style="color: #ffcc00;">${dialogue.action}</span>`;
+            }
+            
+            if (charConfig.position === 'right') {
+                innerHTML = `
+                    <div class="character-content">
+                        <div class="dialog-title">
+                            <span class="title-icon" style="background-color:${charConfig.color}"></span>
+                            <span class="character-name">${dialogue.character}</span>
+                        </div>
+                        <div class="dialog-text">${textContent}</div>
+                        <div class="dialog-options">
+                            <button onclick="nextScene2Dialogue()">【继续】</button>
+                        </div>
+                    </div>
+                    <div class="character-avatar">
+                        <img src="${dialogue.avatar}" alt="${dialogue.character}">
+                    </div>
+                `;
+            } else {
+                innerHTML = `
+                    <div class="character-avatar">
+                        <img src="${dialogue.avatar}" alt="${dialogue.character}">
+                    </div>
+                    <div class="character-content">
+                        <div class="dialog-title">
+                            <span class="title-icon" style="background-color:${charConfig.color}"></span>
+                            <span class="character-name">${dialogue.character}</span>
+                        </div>
+                        <div class="dialog-text">${textContent}</div>
+                        <div class="dialog-options">
+                            <button onclick="nextScene2Dialogue()">【继续】</button>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            dialogueBox.innerHTML = innerHTML;
+            container.appendChild(dialogueBox);
+            
+            setTimeout(() => {
+                dialogueBox.style.opacity = '1';
+            }, 10);
+        }
+        
+        function nextScene2Dialogue() {
+            scene2State.currentIndex++;
+            playNextScene2Dialogue();
+        }
+        
+        // ==================== 通用函数 ====================
+        function addComments(comments, interval = 500) {
+            let index = 0;
+            
+            function addNextComment() {
+                if (index >= comments.length) return;
+                
+                const comment = comments[index];
+                const commentDiv = document.createElement('div');
+                commentDiv.className = 'comment pop-in';
+                commentDiv.innerHTML = `
+                    <div class="comment-user">${comment.user}</div>
+                    <div>${comment.text}</div>
+                `;
+                elements.commentArea.appendChild(commentDiv);
+                
+                setTimeout(() => {
+                    commentDiv.style.animation = 'popIn 0.5s ease forwards';
+                }, 10);
+                
+                scrollCommentsToBottom();
+                
+                const currentCount = parseInt(elements.viewerCount.textContent);
+                const increment = Math.floor(Math.random() * 10) + 5;
+                elements.viewerCount.textContent = currentCount + increment;
+                
+                index++;
+                
+                if (index < comments.length) {
+                    setTimeout(addNextComment, interval);
+                }
+            }
+            
+            addNextComment();
+        }
+        
+        function hideSceneContent() {
+            const scene1Link = document.querySelector('#scene1 .scene-link');
+            if (scene1Link) {
+                scene1Link.style.display = 'none';
+            }
+        }
+        
+        function scrollCommentsToBottom() {
+            if (elements.commentArea) {
+                elements.commentArea.scrollTop = elements.commentArea.scrollHeight;
+            }
+        }
+        
+        function initAudio() {
+            if (elements.bgAudio) {
+                elements.bgAudio.volume = 0.5;
+                document.addEventListener('click', () => {
+                    if (elements.bgAudio.paused) {
+                        elements.bgAudio.play().catch(err => {});
+                    }
+                }, { once: true });
+            }
+        }
+        
+        // ==================== 初始化 ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            initAudio();
+            setTimeout(() => {
+                if (elements.narrationBox) {
+                    elements.narrationBox.style.opacity = '1';
+                    addComments(commentsData.init, 800);
+                }
+            }, 1000);
+            scrollCommentsToBottom();
+            
+            window.addEventListener('hashchange', function() {
+                if (window.location.hash === '#scene2' && !scene2State.isPlaying) {
+                    setTimeout(() => {
+                        if (!scene2State.isPlaying && scene2State.currentIndex === 0) {
+                            startScene2FogSequence();
+                        }
+                    }, 300);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
